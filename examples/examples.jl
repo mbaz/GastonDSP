@@ -23,10 +23,29 @@ fig = @plot {palette = :inferno} "set title 'Spectrogram'" sp
 save(fig, filename = "spectrogram.png", term = "pngcairo font ',10' size 640,480")
 
 # FilterCoefficients
-
 fs = 100
 responsetype = Bandpass(15, 30)
 designmethod = Butterworth(11)
 flt = digitalfilter(responsetype, designmethod; fs=fs)
-fig = plot(flt)
-save(fig, filename = "filtercoefficients.png", term = "pngcairo font ',10' size 640,480")
+
+# magnitude and phase
+fig = plot(flt, fs = fs)
+save(fig, filename = "filter-magphase.png", term = "pngcairo font ',10' size 640,480")
+
+# zero-pole
+fig = plot(flt, type = :zp, fs = fs)
+save(fig, filename = "filter-zeropole.png", term = "pngcairo font ',10' size 640,480")
+
+# group delay, impulse and step responses
+fig = plot(flt, type = (:grpdelay, :stepresp, :impresp), fs = fs)
+save(fig, filename = "filter-delayresps.png", term = "pngcairo font ',10' size 640,480")
+
+# exploring filter orders
+orders = [3, 5, 7, 9, 11]
+fig = plot(digitalfilter.((Bandpass(15, 30),), Butterworth.(orders), fs = fs)..., type = (:mag, :impresp), fs = fs, keys = orders)
+save(fig, filename = "filter-orders.png", term = "pngcairo font ',10' size 640,480")
+
+# circular-axis stem
+n = 1 .+ sin.(2π.*range(0,1-1/32,length=32) .- π/4)
+fig = plot(GastonDSP.CircStem, n)
+save(fig, filename = "circstem.png", term = "pngcairo font ',10' size 640,480")
