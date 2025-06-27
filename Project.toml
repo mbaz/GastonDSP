@@ -1,7 +1,7 @@
 name = "GastonDSP"
 uuid = "fc773c40-3585-4d5f-b720-30d077ff5466"
 authors = ["Miguel Bazdresch <miguelb@2pif.info>"]
-version = "1"
+version = "0.1.0"
 
 [deps]
 DSP = "717857b8-e6f2-59f4-9121-6e50c889abd2"
@@ -10,6 +10,7 @@ GastonRecipes = "39356fd2-1f9e-4efe-8abf-5745c7d9f608"
 [compat]
 DSP = "0.8.3"
 GastonRecipes = "1"
+Test = "1"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
