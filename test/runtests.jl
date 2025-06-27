@@ -1,6 +1,6 @@
 using Test, DSP
 using GastonRecipes: PlotRecipe, AxisRecipe, FigureRecipe
-using GastonDSP: convert_args
+using GastonDSP: convert_args, CircStem
 
 @testset "Spectrogram" begin
     fs = 1000 # sampling frequency in Hz
@@ -32,4 +32,29 @@ end
     flt = digitalfilter(responsetype, designmethod; fs=fs)
     fig = convert_args(flt)
     @test fig isa FigureRecipe
+    fig = convert_args(flt, type = :mag)
+    @test fig isa AxisRecipe
+    fig = convert_args(flt, type = :phase)
+    @test fig isa AxisRecipe
+    fig = convert_args(flt, type = :zp)
+    @test fig isa AxisRecipe
+    fig = convert_args(flt, type = :grpdelay)
+    @test fig isa AxisRecipe
+    fig = convert_args(flt, type = :stepresp)
+    @test fig isa AxisRecipe
+    fig = convert_args(flt, type = :impresp)
+    @test fig isa AxisRecipe
+    fig = convert_args(flt, type = :all)
+    @test fig isa FigureRecipe
+    fig = convert_args(flt, type = (:mag, :zp))
+    @test fig isa FigureRecipe
+    fig = convert_args(flt, type = (:grpdelay, :mag, :impresp))
+    @test fig isa FigureRecipe
 end
+
+@testset "CircStem" begin
+    n = 1 .+ sin.(2π.*range(0,1-1/32,length=32) .- π/4)
+    fig = convert_args(CircStem, n)
+    @test fig isa AxisRecipe
+end
+

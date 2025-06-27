@@ -38,12 +38,13 @@ save(fig, filename = "filter-zeropole.png", term = "pngcairo font ',10' size 640
 
 # group delay, impulse and step responses
 fig = plot(flt, type = (:grpdelay, :stepresp, :impresp), fs = fs)
-save(fig, filename = "filter-delayresps.png", term = "pngcairo font ',10' size 640,480")
+save(fig, filename = "filter-delayresps.png", term = "pngcairo font ',10' size 640,1000")
 
 # exploring filter orders
 orders = [3, 5, 7, 9, 11]
-fig = plot(digitalfilter.((Bandpass(15, 30),), Butterworth.(orders), fs = fs)..., type = (:mag, :impresp), fs = fs, keys = orders)
-save(fig, filename = "filter-orders.png", term = "pngcairo font ',10' size 640,480")
+fig = plot(digitalfilter.((Bandpass(15, 30),), Butterworth.(orders), fs = fs)...,
+           type = (:mag, :phase, :impresp), fs = fs, keys = orders)
+save(fig, filename = "filter-orders.png", term = "pngcairo font ',10' size 640,1000")
 
 # circular-axis stem
 n = 1 .+ sin.(2π.*range(0,1-1/32,length=32) .- π/4)

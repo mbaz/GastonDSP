@@ -64,7 +64,7 @@ function convert_args(filters::FilterCoefficients{:z}... ;
                       impn = 100, stepn = 100,
                       w = range(0, π, 100),
                       magylim = (-15, Inf),
-                      keys = [],
+                      keys = (),
                       lw = 1.5)
     ax = AxisRecipe[]
     if !(type isa Tuple)
@@ -88,84 +88,80 @@ function convert_args(filters::FilterCoefficients{:z}... ;
             # zeros
             push!(p, PlotRecipe((real.(fzp.z), imag.(fzp.z)), "w p pt 7 lc 'red' t 'zero'"))
             # axis
-            push!(ax, AxisRecipe("set grid
-                                  set key box outside
-                                  set xlabel 'Real'
-                                  set ylabel 'Imaginary'
-                                  set title 'Zero-Pole plot'", p))
+            axis = AxisRecipe("set grid
+                               set key box outside
+                               set xlabel 'Real'
+                               set ylabel 'Imaginary'
+                               set title 'Zero-Pole plot'", p)
+            (count == 1) && return axis
+            push!(ax, axis)
         end
         if t == :mag || t == :magnitude || t == :all
-            p = PlotRecipe[]
-            xl = "'Frequency [Hz]'"
-            for (i, filt) in enumerate(filters)
-                H = freqresp(filt, w)
-                title = isempty(keys) ? "" : "title '$(keys[i])'"
-                title *= " lw $(lw)"
-                push!(p, PlotRecipe((freq, amp2db.(abs.(H))), title))
-            end
-            ylim_min = magylim[1] == -Inf ? '*' : magylim[1]
-            ylim_max = magylim[2] == Inf ? '*' : magylim[2]
-            yrange = "[$(ylim_min):$(ylim_max)]"
-            if isempty(keys)
-                key = "unset key"
-            else
-                key = "set key box outside title 'Order'"
-            end
-            push!(ax, AxisRecipe("set yrange $(yrange)
-                                  $key
-                                  set grid
-                                  set title '|H|'
-                                  set xlabel $xl
-                                  set ylabel 'Magnitude [dB]'", p))
+        axis = axis_freq(freqresp, amp2db ∘ abs,
+                         w, freq, filters, keys, magylim, lw, "|H|", "Magnitude [dB]")
+            (count == 1) && return axis
+            push!(ax, axis)
         end
         if t == :phase || t == :all
-            p = PlotRecipe[]
-            xl = "'Frequency [Hz]'"
-            for (i, filt) in enumerate(filters)
-                phi = phaseresp(filt, w)
-                title = isempty(keys) ? "" : "title '$(keys[i])'"
-                title *= " lw $(lw)"
-                push!(p, PlotRecipe((freq, phi), title))
-            end
-            if isempty(keys)
-                key = "unset key"
-            else
-                key = "set key box outside title 'Order'"
-            end
-            push!(ax, AxisRecipe("unset yrange
-                                  $key
-                                  set grid
-                                  set title '∠ H'
-                                  set xlabel $xl
-                                  set ylabel 'Phase [rad]'", p))
+            axis = axis_freq(phaseresp, identity, w, freq, filters, keys, (), lw, "∠ H", "Phase [rad]")
+            (count == 1) && return axis
+            push!(ax, axis)
         end
         if t == :grp || t == :grpdelay || t == :all
-            p = PlotRecipe[]
-            xl = "'Frequency [Hz]'"
-            for (i, filt) in enumerate(filters)
-                tau = grpdelay(filt, w)
-                title = isempty(keys) ? "" : "title '$(keys[i])'"
-                title *= " lw $(lw)"
-                push!(p, PlotRecipe((freq, tau), title))
-            end
-            if isempty(keys)
-                key = "unset key"
-            else
-                key = "set key box outside title 'Order'"
-            end
-            push!(ax, AxisRecipe("unset yrange
-                                  $key
-                                  set grid
-                                  set title 'Group Delay'
-                                  set xlabel $xl
-                                  set ylabel 'τ [sec]'", p))
+            axis = axis_freq(grpdelay, identity, w, freq, filters, keys, (), lw, "Group Delay", "τ [s]")
+            (count == 1) && return axis
+            push!(ax, axis)
         end
         if t == :imp || t == :impresp || t == :all
+            axis = axis_time(impresp, impn, fs, filters, keys, lw, "Impulse Response")
+            (count == 1) && return axis
+            push!(ax, axis)
+        end
+        if t == :step || t == :stepresp || t == :all
+            axis = axis_time(stepresp, impn, fs, filters, keys, lw, "Step Response")
+            (count == 1) && return axis
+            push!(ax, axis)
+        end
+    end
+    FigureRecipe(ax, "layout $count,1", false)
+end
+
+function axis_freq(fun, postfun,
+                   w, freq, filters, keys, magylim, lw, ptitle, ylabel)::AxisRecipe
+    p = PlotRecipe[]
+    xl = "'Frequency [Hz]'"
+    for (i, filt) in enumerate(filters)
+        H = fun(filt, w)
+        title = isempty(keys) ? "" : "title '$(keys[i])'"
+        title *= " lw $(lw)"
+        push!(p, PlotRecipe((freq, postfun.(H)), title))
+    end
+    if magylim isa Tuple && length(magylim) == 2
+        ylim_min = magylim[1] == -Inf ? '*' : magylim[1]
+        ylim_max = magylim[2] == Inf ? '*' : magylim[2]
+        yrange = "set yrange [$(ylim_min):$(ylim_max)]"
+    else
+        yrange = "unset yrange"
+    end
+    if isempty(keys)
+        key = "unset key"
+    else
+        key = "set key box outside title 'Order'"
+    end
+    AxisRecipe("$yrange
+                $key
+                set grid
+                set title '$ptitle'
+                set xlabel $xl
+                set ylabel '$ylabel'", p)
+end
+
+function axis_time(fun, n, fs, filters, keys, lw, ptitle)::AxisRecipe
             p = PlotRecipe[]
             xl = "'Time [s]'"
-            time = range(0, step = 1/fs, length = impn)
+            time = range(0, step = 1/fs, length = n)
             for (i, filt) in enumerate(filters)
-                ir = impresp(filt, impn)
+                ir = fun(filt, n)
                 title = isempty(keys) ? "" : "title '$(keys[i])'"
                 title *= " lw $(lw)"
                 push!(p, PlotRecipe((time, ir), title))
@@ -175,37 +171,12 @@ function convert_args(filters::FilterCoefficients{:z}... ;
             else
                 key = "set key box outside title 'Order'"
             end
-            push!(ax, AxisRecipe("unset yrange
-                                  $key
-                                  set grid
-                                  set title 'Impulse Response'
-                                  set xlabel $xl
-                                  set ylabel 'Amplitude'", p))
-        end
-        if t == :step || t == :stepresp || t == :all
-            p = PlotRecipe[]
-            xl = "'Time [s]'"
-            time = range(0, step = 1/fs, length = stepn)
-            for (i, filt) in enumerate(filters)
-                sr = stepresp(filt, stepn)
-                title = isempty(keys) ? "" : "title '$(keys[i])'"
-                title *= " lw $(lw)"
-                push!(p, PlotRecipe((time, sr), title))
-            end
-            if isempty(keys)
-                key = "unset key"
-            else
-                key = "set key box outside title 'Order'"
-            end
-            push!(ax, AxisRecipe("unset yrange
-                                  $key
-                                  set grid
-                                  set title 'Step Response'
-                                  set xlabel $xl
-                                  set ylabel 'Amplitude'", p))
-        end
-    end
-    FigureRecipe(ax, "layout $count,1", false)
+            return AxisRecipe("unset yrange
+                               $key
+                               set grid
+                               set title '$ptitle'
+                               set xlabel $xl
+                               set ylabel 'Amplitude'", p)
 end
 
 struct CircStem end
